@@ -2,6 +2,7 @@
 
 namespace BookStack\Exports\Controllers;
 
+use BookStack\Entities\Models\Page;
 use BookStack\Entities\Queries\PageQueries;
 use BookStack\Exports\ExportFormatter;
 use BookStack\Exports\ZipExports\ZipExportBuilder;
@@ -75,5 +76,15 @@ class PageExportApiController extends ApiController
         $zip = $builder->buildForPage($page);
 
         return $this->download()->streamedFileDirectly($zip, $page->slug . '.zip', true);
+    }
+
+    /**
+     * Export a page as an EPUB file.
+     */
+    public function exportEpub(int $id)
+    {
+        $page = $this->queries->findVisibleByIdOrFail($id);
+        $epubContent = $this->exportFormatter->pageToEpub($page);
+        return $this->download()->directly($epubContent, $page->slug . '.epub');
     }
 }

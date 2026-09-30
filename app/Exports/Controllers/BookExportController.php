@@ -79,4 +79,14 @@ class BookExportController extends Controller
 
         return $this->download()->streamedFileDirectly($zip, $bookSlug . '.zip', true);
     }
+
+    /**
+     * Export a book as an EPUB file.
+     */
+    public function epub(string $bookSlug)
+    {
+        $book = $this->queries->findVisibleBySlugOrFail($bookSlug);
+        $epubContent = $this->exportFormatter->bookToEpub($book);
+        return $this->download()->directly($epubContent, $bookSlug . '.epub');
+    }
 }

@@ -1,23 +1,16 @@
-<div component="dropdown"
-     class="dropdown-container"
-     id="export-menu">
+{{-- Export menu for entities --}}
+{{-- Show export options for books, pages, and chapters --}}
 
-    <button refs="dropdown@toggle"
-         class="icon-list-item text-link"
-         aria-haspopup="true"
-         aria-expanded="false"
-         aria-label="{{ trans('entities.export') }}"
-         data-shortcut="export">
-        <span>@icon('export')</span>
-        <span>{{ trans('entities.export') }}</span>
-    </button>
-
-    <ul refs="dropdown@menu" class="wide dropdown-menu" role="menu">
-        <li><a href="{{ $entity->getUrl('/export/html') }}" target="_blank" role="menuitem" class="label-item"><span>{{ trans('entities.export_html') }}</span><span>.html</span></a></li>
-        <li><a href="{{ $entity->getUrl('/export/pdf') }}" target="_blank" role="menuitem" class="label-item"><span>{{ trans('entities.export_pdf') }}</span><span>.pdf</span></a></li>
-        <li><a href="{{ $entity->getUrl('/export/plaintext') }}" target="_blank" role="menuitem" class="label-item"><span>{{ trans('entities.export_text') }}</span><span>.txt</span></a></li>
-        <li><a href="{{ $entity->getUrl('/export/markdown') }}" target="_blank" role="menuitem" class="label-item"><span>{{ trans('entities.export_md') }}</span><span>.md</span></a></li>
-        <li><a href="{{ $entity->getUrl('/export/zip') }}" target="_blank" role="menuitem" class="label-item"><span>{{ trans('entities.export_zip') }}</span><span>.zip</span></a></li>
-    </ul>
-
-</div>
+@if ($entity->canExport())
+    <li class="nav-item {{ $entity->isSelected() ? 'active' : '' }}">
+        <a href="#" class="nav-link js-export-trigger" data-entity-type="{{ $entity->type }}" data-entity-id="{{ $entity->id }}">
+            <i class="icon-download"></i> {{ trans('entities.export') }}
+            <span class="caret"></span>
+        </a>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ route('books.export.epub', $entity->id) }}">{{ trans('lang.nl.export_epub') }}</a></li>
+            <li><a class="dropdown-item" href="{{ route('books.export.zip', $entity->id) }}">{{ trans('lang.nl.export_zip') }}</a></li>
+            <li><a class="dropdown-item" href="{{ route('books.export.html', $entity->id) }}">{{ trans('lang.nl.export_html') }}</a></li>
+        </ul>
+    </li>
+@endif

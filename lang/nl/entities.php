@@ -39,6 +39,7 @@ return [
     'export_pdf' => 'PDF bestand',
     'export_text' => 'Normaal tekstbestand',
     'export_md' => 'Markdown bestand',
+    'export_epub' => 'EPUB bestand',
     'export_zip' => 'Portable ZIP',
     'default_template' => 'Standaard Paginasjabloon',
     'default_template_explain' => 'Ken een paginasjabloon toe die zal worden gebruikt als de standaardinhoud voor alle pagina\'s die binnen dit item worden aangemaakt. Houd er rekening mee dat dit alleen zal worden gebruikt als de paginamaker leesrechten heeft voor de gekozen sjabloonpagina.',

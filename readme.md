@@ -142,6 +142,36 @@ We want BookStack to remain accessible to as many people as possible. We aim for
 
 The website which contains the project docs & blog can be found in the [bookstack/website](https://codeberg.org/bookstack/website) repo.
 
+## 🔧 DigiPunt Fork Extensions
+
+This fork adds the following extensions to BookStack, deployed at `https://docs.digipunt.aldof.duckdns.org`:
+
+### EPUB Export
+
+Pages, chapters, and books can be exported as EPUB files via the web UI and API (`/api/pages/{id}/export/epub`, etc.).
+
+### DigiPunt Theme
+
+A custom theme (`APP_THEME=digipunt`) providing:
+- **Sources management** (bronnen) — link external source URLs to pages, manage via modal
+- **Dutch default language** with language switching for non-logged-in users
+- **Praktische informatie** page with SharePoint integration links
+
+### Autonomous Documentation Freshness
+
+Spec: [`specs/001-autonomous-doc-freshness/spec.md`](specs/001-autonomous-doc-freshness/spec.md)
+
+Ad-hoc source change detection + LLM auto-update:
+- On page view by a logged-in editor, linked source URLs are checked for content changes
+- Content extraction ignores sidebars/ads/nav — only main content is hashed
+- When a source changes, ALL pages sharing that source are queued for update
+- LLM (FreeLLM API) generates updated page content stored as a draft
+- Admin reviews and publishes or rejects the draft (human-in-the-loop)
+
+**API endpoints**: `GET/POST /api/digipunt/sources`, `POST /api/digipunt/sources/check`, `POST /api/digipunt/pages/{id}/update`, `GET /api/digipunt/updates`, `DELETE /api/digipunt/updates/{id}`, `GET /api/digipunt/models`
+
+See [`AGENTS.md`](AGENTS.md) for full architecture and deployment details.
+
 ## ⚖️ License
 
 The BookStack source is provided under the [MIT License](https://codeberg.org/bookstack/bookstack/src/branch/development/LICENSE). 

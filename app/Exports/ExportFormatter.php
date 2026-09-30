@@ -343,4 +343,133 @@ class ExportFormatter
 
         return trim($text);
     }
+
+    /**
+     * Convert a page to an EPUB file.
+     */
+    public function pageToEpub(Page $page): string
+    {
+        $page->html = (new PageContent($page))->render();
+        return $this->htmlToEpub($page->html, $page->name);
+    }
+
+    /**
+     * Convert a chapter to an EPUB file.
+     */
+    public function chapterToEpub(Chapter $chapter): string
+    {
+        $pages = $chapter->getVisiblePages();
+        $parts = [];
+        foreach ($pages as $page) {
+            $parts[] = $this->pageToEpub($page);
+        }
+        return implode("\n\n", $parts);
+    }
+
+    /**
+     * Convert a book to an EPUB file.
+     */
+    public function bookToEpub(Book $book): string
+    {
+        $bookTree = (new BookContents($book))->getTree(false, true);
+        $parts = [];
+        foreach ($bookTree as $child) {
+            if ($child instanceof Chapter) {
+                $parts[] = $this->chapterToEpub($child);
+            } else {
+                $parts[] = $this->pageToEpub($child);
+            }
+        }
+        return implode("\n\n", $parts);
+    }
+
+    /**
+     * Build an EPUB binary from HTML content.
+     */
+    protected function htmlToEpub(string $html, string $title): string
+    {
+        $zip = new \ZipArchive();
+        $tmp = tempnam(sys_get_temp_dir(), 'bs-epub-');
+        $zip->open($tmp, \ZipArchive::CREATE);
+
+        // mimetype (must be first, uncompressed)
+        $zip->addFromString('mimetype', 'application/epub+zip');
+
+        // META-INF/container.xml
+        $container = '<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>';
+        $zip->addFromString('META-INF/container.xml', $container);
+
+        // OEBPS/package.opf
+        $packageOpf = '<?xml version="1.0" encoding="UTF-8"?>
+<package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:title>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</dc:title>
+    <dc:language>nl</dc:language>
+    <dc:identifier id="uid">urn:uuid:' . uniqid() . '</dc:identifier>
+    <meta property="dcterms:modified">' . gmdate('Y-m-d\TH:i:s\Z') . '</meta>
+  </metadata>
+  <spine toc="ncx">
+    <itemref idref="nav"/>
+  </spine>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml"/>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    <item id="style" href="style.css" media-type="text/css"/>
+  </manifest>
+</package>';
+        $zip->addFromString('OEBPS/content.opf', $packageOpf);
+
+        // nav.xhtml
+        $nav = '<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head><title>Navigation</title></head>
+<body><nav epub:type="toc">' .
+        '<ol><li><a href="chapter.xhtml">' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</a></li></ol>' .
+        '</nav></body></html>';
+        $zip->addFromString('OEBPS/nav.xhtml', $nav);
+
+        // toc.ncx
+        $ncx = '<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head><meta name="dtb:totalPageCount" content="1"/><meta name="dtb:maxPageNumber" content="0"/></head>
+  <docTitle><text>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</text></docTitle>
+  <navMap>
+    <navPoint id="1"><navLabel><text>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</text></navLabel>
+      <content src="chapter.xhtml"/></navPoint>
+  </navMap>
+</ncx>';
+        $zip->addFromString('OEBPS/toc.ncx', $ncx);
+
+        // style.css
+        $css = 'body { font-family: Georgia, serif; line-height: 1.6; margin: 1em; }
+h2 { color: #222; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 1.5em; }
+pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-size: 0.9em; }
+code { background: #f4f4f4; padding: 2px 5px; }
+blockquote { border-left: 4px solid #ccc; margin: 1em 0; padding-left: 1em; color: #555; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #999; padding: 8px; }
+th { background: #e8e8e8; }
+ul, ol { margin: 0.5em 0; padding-left: 2em; }
+p { margin: 0.5em 0; }
+hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }';
+        $zip->addFromString('OEBPS/style.css', $css);
+
+        // chapter.xhtml (the main content)
+        $chapter = '<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</title>
+<link rel="stylesheet" type="text/css" href="style.css"/></head>
+<body>' . $html . '</body></html>';
+        $zip->addFromString('OEBPS/chapter.xhtml', $chapter);
+
+        $zip->close();
+        $epubData = file_get_contents($tmp);
+        unlink($tmp);
+        return $epubData;
+    }
 }

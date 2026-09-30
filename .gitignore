@@ -28,6 +28,10 @@ nbproject
 .nvmrc
 .settings/
 webpack-stats.json
+
+# DigiPunt fork artifacts
+graphify-out/
+bookstack-api-client/
 .phpunit.result.cache
 .DS_Store
 phpstan.neon

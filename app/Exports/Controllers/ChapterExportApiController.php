@@ -2,6 +2,7 @@
 
 namespace BookStack\Exports\Controllers;
 
+use BookStack\Entities\Models\Chapter;
 use BookStack\Entities\Queries\ChapterQueries;
 use BookStack\Exports\ExportFormatter;
 use BookStack\Exports\ZipExports\ZipExportBuilder;
@@ -75,5 +76,15 @@ class ChapterExportApiController extends ApiController
         $zip = $builder->buildForChapter($chapter);
 
         return $this->download()->streamedFileDirectly($zip, $chapter->slug . '.zip', true);
+    }
+
+    /**
+     * Export a chapter as an EPUB file.
+     */
+    public function exportEpub(int $id)
+    {
+        $chapter = $this->queries->findVisibleByIdOrFail($id);
+        $epubContent = $this->exportFormatter->chapterToEpub($chapter);
+        return $this->download()->directly($epubContent, $chapter->slug . '.epub');
     }
 }

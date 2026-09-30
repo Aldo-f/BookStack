@@ -89,4 +89,14 @@ class PageExportController extends Controller
 
         return $this->download()->streamedFileDirectly($zip, $pageSlug . '.zip', true);
     }
+
+    /**
+     * Export a page as an EPUB file.
+     */
+    public function epub(string $bookSlug, string $pageSlug)
+    {
+        $page = $this->queries->findVisibleBySlugsOrFail($bookSlug, $pageSlug);
+        $epubContent = $this->exportFormatter->pageToEpub($page);
+        return $this->download()->directly($epubContent, $pageSlug . '.epub');
+    }
 }

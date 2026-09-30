@@ -2,6 +2,7 @@
 
 namespace BookStack\Exports\Controllers;
 
+use BookStack\Entities\Models\Chapter;
 use BookStack\Entities\Queries\ChapterQueries;
 use BookStack\Exceptions\NotFoundException;
 use BookStack\Exports\ExportFormatter;
@@ -50,8 +51,6 @@ class ChapterExportController extends Controller
 
     /**
      * Export a chapter to a simple plaintext .txt file.
-     *
-     * @throws NotFoundException
      */
     public function plainText(string $bookSlug, string $chapterSlug)
     {
@@ -63,8 +62,6 @@ class ChapterExportController extends Controller
 
     /**
      * Export a chapter to a simple markdown file.
-     *
-     * @throws NotFoundException
      */
     public function markdown(string $bookSlug, string $chapterSlug)
     {
@@ -75,7 +72,7 @@ class ChapterExportController extends Controller
     }
 
     /**
-     * Export a book to a contained ZIP export file.
+     * Export a chapter to a contained ZIP export file.
      * @throws NotFoundException
      */
     public function zip(string $bookSlug, string $chapterSlug, ZipExportBuilder $builder)
@@ -84,5 +81,15 @@ class ChapterExportController extends Controller
         $zip = $builder->buildForChapter($chapter);
 
         return $this->download()->streamedFileDirectly($zip, $chapterSlug . '.zip', true);
+    }
+
+    /**
+     * Export a chapter as an EPUB file.
+     */
+    public function epub(string $bookSlug, string $chapterSlug)
+    {
+        $chapter = $this->queries->findVisibleBySlugsOrFail($bookSlug, $chapterSlug);
+        $epubContent = $this->exportFormatter->chapterToEpub($chapter);
+        return $this->download()->directly($epubContent, $chapterSlug . '.epub');
     }
 }

@@ -32,6 +32,7 @@ Route::get('pages/{id}/export/pdf', [ExportControllers\PageExportApiController::
 Route::get('pages/{id}/export/plaintext', [ExportControllers\PageExportApiController::class, 'exportPlainText']);
 Route::get('pages/{id}/export/markdown', [ExportControllers\PageExportApiController::class, 'exportMarkdown']);
 Route::get('pages/{id}/export/zip', [ExportControllers\PageExportApiController::class, 'exportZip']);
+Route::get('pages/{id}/export/epub', [ExportControllers\PageExportApiController::class, 'exportEpub']);
 
 Route::get('chapters', [EntityControllers\ChapterApiController::class, 'list']);
 Route::post('chapters', [EntityControllers\ChapterApiController::class, 'create']);
@@ -43,6 +44,7 @@ Route::get('chapters/{id}/export/pdf', [ExportControllers\ChapterExportApiContro
 Route::get('chapters/{id}/export/plaintext', [ExportControllers\ChapterExportApiController::class, 'exportPlainText']);
 Route::get('chapters/{id}/export/markdown', [ExportControllers\ChapterExportApiController::class, 'exportMarkdown']);
 Route::get('chapters/{id}/export/zip', [ExportControllers\ChapterExportApiController::class, 'exportZip']);
+Route::get('chapters/{id}/export/epub', [ExportControllers\ChapterExportApiController::class, 'exportEpub']);
 
 Route::get('books', [EntityControllers\BookApiController::class, 'list']);
 Route::post('books', [EntityControllers\BookApiController::class, 'create']);
@@ -54,6 +56,7 @@ Route::get('books/{id}/export/pdf', [ExportControllers\BookExportApiController::
 Route::get('books/{id}/export/plaintext', [ExportControllers\BookExportApiController::class, 'exportPlainText']);
 Route::get('books/{id}/export/markdown', [ExportControllers\BookExportApiController::class, 'exportMarkdown']);
 Route::get('books/{id}/export/zip', [ExportControllers\BookExportApiController::class, 'exportZip']);
+Route::get('books/{id}/export/epub', [ExportControllers\BookExportApiController::class, 'exportEpub']);
 
 Route::get('shelves', [EntityControllers\BookshelfApiController::class, 'list']);
 Route::post('shelves', [EntityControllers\BookshelfApiController::class, 'create']);

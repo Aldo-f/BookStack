@@ -82,6 +82,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/books/{bookSlug}/export/pdf', [ExportControllers\BookExportController::class, 'pdf']);
     Route::get('/books/{bookSlug}/export/markdown', [ExportControllers\BookExportController::class, 'markdown']);
     Route::get('/books/{bookSlug}/export/zip', [ExportControllers\BookExportController::class, 'zip']);
+    Route::get('/books/{bookSlug}/export/epub', [ExportControllers\BookExportController::class, 'epub']);
     Route::get('/books/{bookSlug}/export/plaintext', [ExportControllers\BookExportController::class, 'plainText']);
 
     // Pages
@@ -95,6 +96,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/books/{bookSlug}/page/{pageSlug}/export/markdown', [ExportControllers\PageExportController::class, 'markdown']);
     Route::get('/books/{bookSlug}/page/{pageSlug}/export/plaintext', [ExportControllers\PageExportController::class, 'plainText']);
     Route::get('/books/{bookSlug}/page/{pageSlug}/export/zip', [ExportControllers\PageExportController::class, 'zip']);
+    Route::get('/books/{bookSlug}/page/{pageSlug}/export/epub', [ExportControllers\PageExportController::class, 'epub']);
     Route::get('/books/{bookSlug}/page/{pageSlug}/edit', [EntityControllers\PageController::class, 'edit']);
     Route::get('/books/{bookSlug}/page/{pageSlug}/move', [EntityControllers\PageController::class, 'showMove']);
     Route::put('/books/{bookSlug}/page/{pageSlug}/move', [EntityControllers\PageController::class, 'move']);
@@ -136,6 +138,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/books/{bookSlug}/chapter/{chapterSlug}/export/markdown', [ExportControllers\ChapterExportController::class, 'markdown']);
     Route::get('/books/{bookSlug}/chapter/{chapterSlug}/export/plaintext', [ExportControllers\ChapterExportController::class, 'plainText']);
     Route::get('/books/{bookSlug}/chapter/{chapterSlug}/export/zip', [ExportControllers\ChapterExportController::class, 'zip']);
+    Route::get('/books/{bookSlug}/chapter/{chapterSlug}/export/epub', [ExportControllers\ChapterExportController::class, 'epub']);
     Route::put('/books/{bookSlug}/chapter/{chapterSlug}/permissions', [PermissionsController::class, 'updateForChapter']);
     Route::get('/books/{bookSlug}/chapter/{chapterSlug}/references', [ReferenceController::class, 'chapter']);
     Route::get('/books/{bookSlug}/chapter/{chapterSlug}/delete', [EntityControllers\ChapterController::class, 'showDelete']);

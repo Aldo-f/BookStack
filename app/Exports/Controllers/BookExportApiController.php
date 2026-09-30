@@ -2,6 +2,7 @@
 
 namespace BookStack\Exports\Controllers;
 
+use BookStack\Entities\Models\Book;
 use BookStack\Entities\Queries\BookQueries;
 use BookStack\Exports\ExportFormatter;
 use BookStack\Exports\ZipExports\ZipExportBuilder;
@@ -67,7 +68,7 @@ class BookExportApiController extends ApiController
     }
 
     /**
-     * Export a book as a contained ZIP export file.
+     * Export a book as a contained ZIP file.
      */
     public function exportZip(int $id, ZipExportBuilder $builder)
     {
@@ -75,5 +76,15 @@ class BookExportApiController extends ApiController
         $zip = $builder->buildForBook($book);
 
         return $this->download()->streamedFileDirectly($zip, $book->slug . '.zip', true);
+    }
+
+    /**
+     * Export a book as an EPUB file.
+     */
+    public function exportEpub(int $id)
+    {
+        $book = $this->queries->findVisibleByIdOrFail($id);
+        $epubContent = $this->exportFormatter->bookToEpub($book);
+        return $this->download()->directly($epubContent, $book->slug . '.epub');
     }
 }
