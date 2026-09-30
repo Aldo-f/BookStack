@@ -249,7 +249,8 @@ class ExportFormatter
     {
         $html = $pageRendered ? $page->html : (new PageContent($page))->render();
         $contentText = (new HtmlToPlainText())->convert($html);
-        return $page->name . ($fromParent ? "\n" : "\n\n") . $contentText;
+        $sourcesText = $this->getSourcesText($page);
+        return $page->name . ($fromParent ? "\n" : "\n\n") . $contentText . $sourcesText;
     }
 
     /**
@@ -294,11 +295,12 @@ class ExportFormatter
      */
     public function pageToMarkdown(Page $page): string
     {
+        $sourcesMd = $this->getSourcesMarkdown($page);
         if ($page->markdown) {
-            return '# ' . $page->name . "\n\n" . $page->markdown;
+            return '# ' . $page->name . "\n\n" . $page->markdown . $sourcesMd;
         }
 
-        return '# ' . $page->name . "\n\n" . (new HtmlToMarkdown($page->html))->convert();
+        return '# ' . $page->name . "\n\n" . (new HtmlToMarkdown($page->html))->convert() . $sourcesMd;
     }
 
     /**
@@ -350,7 +352,9 @@ class ExportFormatter
     public function pageToEpub(Page $page): string
     {
         $page->html = (new PageContent($page))->render();
-        return $this->htmlToEpub($page->html, $page->name);
+        $sourcesHtml = $this->getSourcesHtml($page);
+        $html = $page->html . $sourcesHtml;
+        return $this->buildEpub([$page->name => $html], $page->name);
     }
 
     /**
@@ -359,11 +363,13 @@ class ExportFormatter
     public function chapterToEpub(Chapter $chapter): string
     {
         $pages = $chapter->getVisiblePages();
-        $parts = [];
+        $chapters = [];
         foreach ($pages as $page) {
-            $parts[] = $this->pageToEpub($page);
+            $page->html = (new PageContent($page))->render();
+            $sourcesHtml = $this->getSourcesHtml($page);
+            $chapters[$page->name] = $page->html . $sourcesHtml;
         }
-        return implode("\n\n", $parts);
+        return $this->buildEpub($chapters, $chapter->name);
     }
 
     /**
@@ -372,21 +378,101 @@ class ExportFormatter
     public function bookToEpub(Book $book): string
     {
         $bookTree = (new BookContents($book))->getTree(false, true);
-        $parts = [];
+        $chapters = [];
         foreach ($bookTree as $child) {
             if ($child instanceof Chapter) {
-                $parts[] = $this->chapterToEpub($child);
+                foreach ($child->getVisiblePages() as $page) {
+                    $page->html = (new PageContent($page))->render();
+                    $sourcesHtml = $this->getSourcesHtml($page);
+                    $chapters[$page->name] = $page->html . $sourcesHtml;
+                }
             } else {
-                $parts[] = $this->pageToEpub($child);
+                $page = $child;
+                $page->html = (new PageContent($page))->render();
+                $sourcesHtml = $this->getSourcesHtml($page);
+                $chapters[$page->name] = $page->html . $sourcesHtml;
             }
         }
-        return implode("\n\n", $parts);
+        return $this->buildEpub($chapters, $book->name);
     }
 
     /**
-     * Build an EPUB binary from HTML content.
+     * Get sources (bronnen) for a page as HTML.
      */
-    protected function htmlToEpub(string $html, string $title): string
+    protected function getSourcesHtml(Page $page): string
+    {
+        $sourceLinks = \BookStack\Facades\DB::table('entity_source_links')
+            ->where('entity_id', $page->id)
+            ->where('entity_type', 'page')
+            ->join('sources', 'sources.id', '=', 'entity_source_links.source_id')
+            ->select('sources.title', 'sources.url')
+            ->get();
+
+        if ($sourceLinks->isEmpty()) {
+            return '';
+        }
+
+        $html = '<hr><h3>Bronnen</h3><ul>';
+        foreach ($sourceLinks as $source) {
+            $html .= '<li><a href="' . htmlspecialchars($source->url, ENT_QUOTES, 'UTF-8') . '">'
+                . htmlspecialchars($source->title, ENT_QUOTES, 'UTF-8') . '</a></li>';
+        }
+        $html .= '</ul>';
+        return $html;
+    }
+
+    /**
+     * Get sources (bronnen) for a page as plain text.
+     */
+    protected function getSourcesText(Page $page): string
+    {
+        $sourceLinks = \BookStack\Facades\DB::table('entity_source_links')
+            ->where('entity_id', $page->id)
+            ->where('entity_type', 'page')
+            ->join('sources', 'sources.id', '=', 'entity_source_links.source_id')
+            ->select('sources.title', 'sources.url')
+            ->get();
+
+        if ($sourceLinks->isEmpty()) {
+            return '';
+        }
+
+        $text = "\n\n--- Bronnen ---\n";
+        foreach ($sourceLinks as $source) {
+            $text .= "  - {$source->title}: {$source->url}\n";
+        }
+        return $text;
+    }
+
+    /**
+     * Get sources (bronnen) for a page as Markdown.
+     */
+    protected function getSourcesMarkdown(Page $page): string
+    {
+        $sourceLinks = \BookStack\Facades\DB::table('entity_source_links')
+            ->where('entity_id', $page->id)
+            ->where('entity_type', 'page')
+            ->join('sources', 'sources.id', '=', 'entity_source_links.source_id')
+            ->select('sources.title', 'sources.url')
+            ->get();
+
+        if ($sourceLinks->isEmpty()) {
+            return '';
+        }
+
+        $text = "\n\n---\n\n## Bronnen\n\n";
+        foreach ($sourceLinks as $source) {
+            $text .= "- [{$source->title}]({$source->url})\n";
+        }
+        return $text;
+    }
+
+    /**
+     * Build a valid EPUB 3 binary from an array of [title => html] chapters.
+     *
+     * @param array<string, string> $chapters
+     */
+    protected function buildEpub(array $chapters, string $title): string
     {
         $zip = new \ZipArchive();
         $tmp = tempnam(sys_get_temp_dir(), 'bs-epub-');
@@ -394,60 +480,77 @@ class ExportFormatter
 
         // mimetype (must be first, uncompressed)
         $zip->addFromString('mimetype', 'application/epub+zip');
+        $zip->setCompressionName('mimetype', \ZipArchive::CM_STORE);
 
         // META-INF/container.xml
-        $container = '<?xml version="1.0" encoding="UTF-8"?>
+        $zip->addFromString('META-INF/container.xml', '<?xml version="1.0" encoding="UTF-8"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
   <rootfiles>
     <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
   </rootfiles>
-</container>';
-        $zip->addFromString('META-INF/container.xml', $container);
+</container>');
 
-        // OEBPS/package.opf
-        $packageOpf = '<?xml version="1.0" encoding="UTF-8"?>
+        // Build manifest, spine, nav, ncx
+        $manifestItems = '<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml"/>';
+        $manifestItems .= '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>';
+        $manifestItems .= '<item id="style" href="style.css" media-type="text/css"/>';
+        $spineItems = '';
+        $navOl = '';
+        $ncxNavMap = '';
+        $chapterIndex = 0;
+        $uid = uniqid();
+
+        foreach ($chapters as $chTitle => $chHtml) {
+            $chapterIndex++;
+            $id = 'ch' . $chapterIndex;
+            $href = $id . '.xhtml';
+
+            $manifestItems .= '<item id="' . $id . '" href="' . $href . '" media-type="application/xhtml+xml"/>';
+            $spineItems .= '<itemref idref="' . $id . '"/>';
+            $navOl .= '<li><a href="' . $href . '">' . htmlspecialchars($chTitle, ENT_XML1, 'UTF-8') . '</a></li>';
+            $ncxNavMap .= '<navPoint id="' . $id . '"><navLabel><text>'
+                . htmlspecialchars($chTitle, ENT_XML1, 'UTF-8') . '</text></navLabel><content src="' . $href . '"/></navPoint>';
+
+            // Chapter XHTML
+            $chContent = '<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>' . htmlspecialchars($chTitle, ENT_XML1, 'UTF-8') . '</title>
+<link rel="stylesheet" type="text/css" href="style.css"/></head>
+<body>' . $chHtml . '</body></html>';
+            $zip->addFromString('OEBPS/' . $href, $chContent);
+        }
+
+        // OEBPS/content.opf
+        $zip->addFromString('OEBPS/content.opf', '<?xml version="1.0" encoding="UTF-8"?>
 <package version="3.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid">
   <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
     <dc:title>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</dc:title>
     <dc:language>nl</dc:language>
-    <dc:identifier id="uid">urn:uuid:' . uniqid() . '</dc:identifier>
+    <dc:identifier id="uid">urn:uuid:' . $uid . '</dc:identifier>
     <meta property="dcterms:modified">' . gmdate('Y-m-d\TH:i:s\Z') . '</meta>
   </metadata>
-  <spine toc="ncx">
-    <itemref idref="nav"/>
-  </spine>
-  <manifest>
-    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml"/>
-    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
-    <item id="style" href="style.css" media-type="text/css"/>
-  </manifest>
-</package>';
-        $zip->addFromString('OEBPS/content.opf', $packageOpf);
+  <manifest>' . $manifestItems . '</manifest>
+  <spine toc="ncx">' . $spineItems . '</spine>
+</package>');
 
         // nav.xhtml
-        $nav = '<!DOCTYPE html>
+        $zip->addFromString('OEBPS/nav.xhtml', '<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
 <head><title>Navigation</title></head>
-<body><nav epub:type="toc">' .
-        '<ol><li><a href="chapter.xhtml">' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</a></li></ol>' .
-        '</nav></body></html>';
-        $zip->addFromString('OEBPS/nav.xhtml', $nav);
+<body><nav epub:type="toc"><ol>' . $navOl . '</ol></nav></body></html>');
 
         // toc.ncx
-        $ncx = '<?xml version="1.0" encoding="UTF-8"?>
+        $zip->addFromString('OEBPS/toc.ncx', '<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
-  <head><meta name="dtb:totalPageCount" content="1"/><meta name="dtb:maxPageNumber" content="0"/></head>
+  <head><meta name="dtb:totalPageCount" content="' . $chapterIndex . '"/><meta name="dtb:maxPageNumber" content="0"/></head>
   <docTitle><text>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</text></docTitle>
-  <navMap>
-    <navPoint id="1"><navLabel><text>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</text></navLabel>
-      <content src="chapter.xhtml"/></navPoint>
-  </navMap>
-</ncx>';
-        $zip->addFromString('OEBPS/toc.ncx', $ncx);
+  <navMap>' . $ncxNavMap . '</navMap>
+</ncx>');
 
         // style.css
-        $css = 'body { font-family: Georgia, serif; line-height: 1.6; margin: 1em; }
+        $zip->addFromString('OEBPS/style.css', 'body { font-family: Georgia, serif; line-height: 1.6; margin: 1em; }
 h2 { color: #222; border-bottom: 2px solid #ccc; padding-bottom: 5px; margin-top: 1.5em; }
+h3 { color: #333; margin-top: 1.2em; }
 pre { background: #f4f4f4; padding: 10px; overflow-x: auto; font-size: 0.9em; }
 code { background: #f4f4f4; padding: 2px 5px; }
 blockquote { border-left: 4px solid #ccc; margin: 1em 0; padding-left: 1em; color: #555; }
@@ -456,16 +559,8 @@ th, td { border: 1px solid #999; padding: 8px; }
 th { background: #e8e8e8; }
 ul, ol { margin: 0.5em 0; padding-left: 2em; }
 p { margin: 0.5em 0; }
-hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }';
-        $zip->addFromString('OEBPS/style.css', $css);
-
-        // chapter.xhtml (the main content)
-        $chapter = '<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head><title>' . htmlspecialchars($title, ENT_XML1, 'UTF-8') . '</title>
-<link rel="stylesheet" type="text/css" href="style.css"/></head>
-<body>' . $html . '</body></html>';
-        $zip->addFromString('OEBPS/chapter.xhtml', $chapter);
+hr { border: none; border-top: 1px solid #ccc; margin: 1.5em 0; }
+a { color: #0066cc; }');
 
         $zip->close();
         $epubData = file_get_contents($tmp);
