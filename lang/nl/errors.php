@@ -94,7 +94,7 @@ return [
     'empty_comment' => 'Kan geen lege opmerking toevoegen.',
 
     // Error pages
-    '404_page_not_found' => 'Pagina Niet Gevonden',
+    '404_page_not_found' => 'Pagina niet gevonden',
     'sorry_page_not_found' => 'Sorry, de pagina die je zocht kan niet gevonden worden.',
     'sorry_page_not_found_permission_warning' => 'Als je verwachtte dat deze pagina zou bestaan, heb je misschien geen machtiging om deze te bekijken.',
     'image_not_found' => 'Afbeelding niet gevonden',
