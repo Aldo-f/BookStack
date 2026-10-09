@@ -121,3 +121,4 @@ Route::post('users', [UserApiController::class, 'create']);
 Route::get('users/{id}', [UserApiController::class, 'read']);
 Route::put('users/{id}', [UserApiController::class, 'update']);
 Route::delete('users/{id}', [UserApiController::class, 'delete']);
+Route::post('/digipunt/sources/link', [App\Http\Controllers\DigipuntSourceController::class, 'link']);

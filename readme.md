@@ -142,7 +142,7 @@ We want BookStack to remain accessible to as many people as possible. We aim for
 
 The website which contains the project docs & blog can be found in the [bookstack/website](https://codeberg.org/bookstack/website) repo.
 
-## 🔧 DigiPunt Fork Extensions
+### DigiPunt Fork Extensions
 
 This fork adds the following extensions to BookStack, deployed at `https://docs.digipunt.aldof.duckdns.org`:
 
@@ -161,16 +161,65 @@ A custom theme (`APP_THEME=digipunt`) providing:
 
 Spec: [`specs/001-autonomous-doc-freshness/spec.md`](specs/001-autonomous-doc-freshness/spec.md)
 
-Ad-hoc source change detection + LLM auto-update:
-- On page view by a logged-in editor, linked source URLs are checked for content changes
-- Content extraction ignores sidebars/ads/nav — only main content is hashed
-- When a source changes, ALL pages sharing that source are queued for update
-- LLM (FreeLLM API) generates updated page content stored as a draft
-- Admin reviews and publishes or rejects the draft (human-in-the-loop)
+**Status: Implemented 2026-10-02** - All phases completed:
 
-**API endpoints**: `GET/POST /api/digipunt/sources`, `POST /api/digipunt/sources/check`, `POST /api/digipunt/pages/{id}/update`, `GET /api/digipunt/updates`, `DELETE /api/digipunt/updates/{id}`, `GET /api/digipunt/models`
+- ✅ **Phase 1-3**: Database migrations (`source_snapshots`, `page_update_queue`) + ContentExtractor class with `cleanHtml()` method
+- ✅ **Phase 4-6**: API routes under `/api/digipunt/` (7 endpoints: source check, page update, queue management)
+- ✅ **Phase 7**: Frontend `sources.js` - ad-hoc source check trigger on page load with badge injection
+- ✅ **Phase 8-9**: CSS badges (`sources.css`) for "⚠ Gewijzigd" notifications; E2E test framework ready
 
-See [`AGENTS.md`](AGENTS.md) for full architecture and deployment details.
+**Key Components:**
+
+| File | Purpose |
+|------|---------|
+| `themes/digipunt/SourceChecker.php` | Content extraction + SHA-256 hash computation + change detection |
+| `themes/digipunt/LLMUpdater.php` | LLM API caller with automatic model selection (`getBestModel()` from claude-sonnet family) |
+| `themes/digipunt/functions.php` | API routes (7 endpoints under `/api/digipunt/`) |
+| `themes/digipunt/public/js/sources.js` | Ad-hoc source check trigger + badge injection (admin only) |
+| `themes/digipunt/public/css/sources.css` | Changed-source badge styling (`.digipunt-badge-changed`, `.digipunt-update-notice`) |
+| `themes/digipunt/tests/ContentExtractorTest.php` | TDD tests (4 assertions: extraction, hash determinism, content change, sidebar stability) |
+
+**API Endpoints:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/digipunt/sources` | List sources (includes `changed` flag) |
+| POST | `/api/digipunt/sources` | Add a source |
+| POST | `/api/digipunt/sources/check` | Trigger ad-hoc source check |
+| POST | `/api/digipunt/pages/{id}/update` | Trigger LLM update for a page |
+| GET | `/api/digipunt/updates` | List pending updates |
+| DELETE | `/api/digipunt/updates/{id}` | Reject (delete) a draft |
+| GET | `/api/digipunt/models` | List available LLM models |
+
+**Database Tables:**
+
+- `source_snapshots`: `id`, `source_id`, `content_hash`, `content_length`, `http_status`, `extracted_text`, `checked_at`, `changed`, `model_used`, + Laravel timestamps
+- `page_update_queue`: `id`, `page_id`, `status` (pending/done/failed), `trigger_reason`, `model_used`, `llm_output`, `output_len`, `completed_at`, + Laravel timestamps
+
+**Model Selection:**
+
+- `getBestModel()` queries `/v1/models` and picks the highest version in the `claude-sonnet` family
+- Fallback: configured default model (`claude-sonnet-4-5`)
+- Model used is recorded in `page_update_queue.model_used`
+
+**Content Extraction:**
+
+- PHP `DOMDocument` with `STRIP_SELECTORS` (nav, aside, script, style, header, footer, .sidebar, .menu, .toc, .infobox, .related, .category)
+- Main content selectors: `<main>`, `<article>`, `.mw-content-text`, `.entry-content`, `#content`, `#main-content`
+- Class matching uses exact token comparison to avoid substring false positives
+- Sidebar changes do NOT affect content hash (verified by TDD tests)
+
+**Deployment:**
+
+- **k3s**: Pod label `app=bookstack`, PVC `bookstack-data`
+- **Theme path on pod**: `/config/www/themes/digipunt/`
+- **DB**: MariaDB on `stantonius-db`, database `bookstack`
+- **LLM**: `https://freellm.aldof.duckdns.org/v1` (auto-routing, key in deployment env)
+- **Migrations**: Run via `php artisan digipunt:migrate` on PVC
+
+**Verification-first**: All tests must pass before deployment confirmed.
+
+**English-only**: Logs and communication in English.
 
 ## ⚖️ License
 

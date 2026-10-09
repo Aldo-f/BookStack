@@ -35,6 +35,10 @@ The system detects when linked source URLs change content and, with admin approv
 | `themes/digipunt/views/sources/page-panel.blade.php` | Sources modal HTML |
 | `themes/digipunt/migrations/003_create_source_snapshots_table.php` | source_snapshots table |
 | `themes/digipunt/migrations/004_create_page_update_queue_table.php` | page_update_queue table |
+| `themes/digipunt/SourceChecker.php` | Content extraction + SHA-256 hash + change detection (implemented 2026-10-02) |
+| `themes/digipunt/LLMUpdater.php` | LLM API caller + draft storage (implemented 2026-10-02) |
+| `themes/digipunt/functions.php` | API routes (7 endpoints, implemented 2026-10-02) |
+| `themes/digipunt/tests/ContentExtractorTest.php` | TDD tests (4 assertions, implemented 2026-10-02) |
 
 ### API Endpoints
 

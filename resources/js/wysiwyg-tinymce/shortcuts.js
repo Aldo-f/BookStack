@@ -29,21 +29,6 @@ export function register(editor) {
         window.$events.emit('editor-save-page');
     });
 
-    // Loop through callout styles
-    editor.shortcuts.add('meta+9', '', () => {
-        const selectedNode = editor.selection.getNode();
-        const callout = selectedNode ? selectedNode.closest('.callout') : null;
-
-        const formats = ['info', 'success', 'warning', 'danger'];
-        const currentFormatIndex = formats.findIndex(format => {
-            return callout && callout.classList.contains(format);
-        });
-        const newFormatIndex = (currentFormatIndex + 1) % formats.length;
-        const newFormat = formats[newFormatIndex];
-
-        editor.formatter.apply(`callout${newFormat}`);
-    });
-
     // Link selector shortcut
     editor.shortcuts.add('meta+shift+K', '', () => {
         /** @var {EntitySelectorPopup} * */
