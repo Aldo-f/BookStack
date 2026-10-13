@@ -12,8 +12,14 @@ class InjectDigipuntSources
     {
         $response = $next($request);
 
-        // Only inject on page views, not API
+        // Only inject on page views, not API or edit pages
         if ($request->route() && !$request->routeIs('api.*')) {
+            // Skip edit pages
+            $path = $request->path();
+            if (str_contains($path, '/edit') || str_contains($path, '/move') || str_contains($path, '/copy')) {
+                return $response;
+            }
+
             $pageSlug = $request->route('pageSlug');
             
             if ($pageSlug) {
