@@ -94,3 +94,45 @@ Feature specs live under `specs/` and `.specify/`. The constitution is at `.spec
 - **Upgrade-safe**: All custom logic lives in the theme layer (`themes/digipunt/`), not in core BookStack files.
 - **No GDPR data** in logs or test output.
 - **Pi5 arm64**: Pre-built images must support `linux/arm64`.
+
+## Beads (bd) — Task Management
+
+This project uses [Beads](https://github.com/gastownhall/beads), a Dolt-backed graph issue tracker for AI agents. It is the **source of truth** for task tracking — do not use markdown TODO lists.
+
+### Quick Commands
+
+| Command | Purpose |
+|---------|---------|
+| `bd ready` | List tasks with no open blockers |
+| `bd show <id>` | View task details + audit trail |
+| `bd update <id> --claim` | Atomically claim a task |
+| `bd close <id> "reason"` | Mark complete |
+| `bd create "Title" -p <1-4>` | Create a task |
+| `bd dep add <child> <parent>` | Link tasks (child blocked by parent) |
+| `bd prime` | Inject workflow context + memories |
+| `bd remember "insight"` | Store durable project fact |
+
+### Workflow
+
+1. **Plan** with spec-kit: `specify` → `plan` → `tasks` produces `spec.md`, `plan.md`, `tasks.md`
+2. **Import** tasks into beads: `bd create` with proper priorities and dependencies (`bd dep add`)
+3. **Execute**: `bd ready` → claim → work → `bd close`
+4. **Context**: `bd prime` injects project state at session start; `bd remember` stores cross-session insights
+
+### Spec-Kit + Beads Integration
+
+- `tasks.md` is a **generated artifact** from spec-kit, not the runtime tracker
+- beads owns the runtime state: claims, dependencies, audit trails, context injection
+- When importing spec-kit tasks, translate checkbox order into explicit `blocks` dependency edges
+- Use `bd remember` for durable project facts that `bd prime` injects later
+
+### Git-Free Mode
+
+Beads runs without git via `--stealth` + `BEADS_DIR`:
+```bash
+export BEADS_DIR=/mnt/HDD1/dev/06-apps-bookstack/.beads
+bd init --quiet --stealth
+```
+This avoids committing `.beads/` to the repo and works on non-git VCS.
+
+- **Task tracking**: Use beads (`bd`), not markdown TODO lists. `.hermes/plans/` files are planning artifacts; beads is the runtime tracker.
