@@ -35,6 +35,7 @@ class Kernel extends HttpKernel
             \BookStack\Http\Middleware\VerifyCsrfToken::class,
             \BookStack\Http\Middleware\CheckEmailConfirmed::class,
             \BookStack\Http\Middleware\RunThemeActions::class,
+            \App\Http\Middleware\InjectDigipuntSources::class,
             \BookStack\Http\Middleware\Localization::class,
         ],
         'api' => [

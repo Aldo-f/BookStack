@@ -138,6 +138,7 @@ return [
 
         // BookStack custom service providers
         BookStack\App\Providers\ThemeServiceProvider::class,
+        \App\Plugins\DigipuntAdmin\DigipuntAdminServiceProvider::class,
         BookStack\App\Providers\AppServiceProvider::class,
         BookStack\App\Providers\AuthServiceProvider::class,
         BookStack\App\Providers\EventServiceProvider::class,
