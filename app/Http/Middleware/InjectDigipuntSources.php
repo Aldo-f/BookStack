@@ -42,7 +42,7 @@ class InjectDigipuntSources
                         
                         $injectionHtml = '<div id="digipunt-sources" class="digipunt-sources" data-entity-type="page" data-entity-id="' . (int)$pageId . '"></div>
 <div id="digipunt-sources-list" class="digipunt-sources-list"></div>
-<script src="/theme/digipunt/js/sources.js?v=11"' . $nonceAttr . '></script>';
+<script src="/theme/digipunt/js/sources.js?v=12"' . $nonceAttr . '></script>';
                         
                         // Inject just above the sibling-navigation element (before it)
                         $siblingPos = strpos($html, '<div id="sibling-navigation"');
